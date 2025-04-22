@@ -3,11 +3,23 @@ const cors = require('cors');
 require('dotenv').config()
 const crypto = require('crypto');
 
+// blockchain setup
+const { Web3 } = require('web3');
+
 // server and middleware
 const app = express();
 const PORT = process.env.PORT || 4505;
 app.use(cors());
 app.use(express.json()); // Add JSON body parser middleware
+
+const rpcUrl = process.env.RPC_URL || 'http://127.0.0.1:7545';
+const web3 = new Web3(rpcUrl);
+
+// Load ABI & contract address
+const contractJson = require('./abi/MedicalRecords.json');
+const abi = contractJson.abi;
+const contractAddress = process.env.CONTRACT_ADDRESS;
+const contract = new web3.eth.Contract(abi, contractAddress);
 
 // Firebase setup
 const { initializeApp, applicationDefault, cert } = require('firebase-admin/app');
@@ -92,6 +104,18 @@ const getUserData = async (userID, role, password) => {
         return null;
     }
 };
+
+// get the doctors
+app.get('/api/doctors', async (req, res) => {
+    try {
+      const snap = await db.collection('doctors').get();
+      const doctors = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      res.json(doctors);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
 app.post('/auth/login', (req, res) => {
     try {

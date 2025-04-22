@@ -9,6 +9,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -226,6 +227,7 @@ def register_user():
     vaccines = data.get('vaccines', [])
     medications = data.get('medications', '')
     emergency_contact = data.get('emergencyContact', '')
+    age = data.get('age', '')
     
     # Process allergies - convert from string to array if needed
     allergies = []
@@ -233,6 +235,11 @@ def register_user():
         allergies = [a.strip() for a in allergies_details.split(',')]
     elif isinstance(allergies_details, list):
         allergies = allergies_details
+    contact = {}
+    if isinstance(emergency_contact, str) and emergency_contact.strip():
+        details = [a.strip() for a in emergency_contact.split(',')]
+        if len(details) == 2:
+            contact = {'name': details[0], 'phone': details[1]}
     
     # Build user data structure combining verification data with medical data
     user_data = {
@@ -248,6 +255,7 @@ def register_user():
         'height': height,
         'weight': weight,
         'contact': emergency_contact,
+        'age': age,
         'currentMedications': medications,
         'medicalDetails': {
             'bloodGroup': blood_type,
@@ -314,151 +322,14 @@ def register_user():
             'message': f'Failed to register user: {str(e)}'
         }), 500
 
-# Updated login function that doesn't use sessions
-@app.route('/login', methods=['POST'])
-@app.route('/auth/login', methods=['POST'])
-def login():
-    try:
-        data = request.get_json()
-        print("Login request data:", data)
-        
-        if not data:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid request format'
-            }), 400
-            
-        userID = data.get('userID')
-        password = data.get('password')
-        role = data.get('role')
-
-        if not userID or not password:
-            return jsonify({
-                'success': False,
-                'message': 'UserID and password are required'
-            }), 400
-            
-        valid_roles = ['patients', 'doctors', 'government']
-        if role not in valid_roles:
-            return jsonify({
-                'success': False,
-                'message': f'Invalid role. Must be one of {", ".join(valid_roles)}'
-            }), 400
-        
-        # First try direct document lookup
-        doc_ref = db.collection(role).document(str(userID))
-        doc = doc_ref.get()
-        
-        # If not found by ID, try looking up by aadharId
-        if not doc.exists:
-            print(f"User not found by ID, trying aadharId lookup: {userID}")
-            query = db.collection(role).where('aadharId', '==', userID).limit(1)
-            results = query.stream()
-            docs = list(results)
-            
-            if docs:
-                doc = docs[0]
-                print(f"User found by aadharId: {doc.id}")
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Invalid credentials or user does not exist'
-                }), 401
-
-        user_data = doc.to_dict()
-        print(f"User data retrieved: {user_data.keys()}")
-        
-        stored_password = user_data.get('password', '')
-        
-        # Try both direct comparison and hashed comparison
-        hashed_input_password = hashlib.sha256(password.encode()).hexdigest()
-        
-        password_match = (
-            stored_password == password or 
-            stored_password == hashed_input_password
-        )
-        
-        if not password_match:
-            print("Password mismatch")
-            return jsonify({
-                'success': False,
-                'message': 'Invalid credentials'
-            }), 401
-            
-        # Remove password before sending response
-        if 'password' in user_data:
-            user_data.pop('password')
-            
-        # Store active user in global store instead of session
-        active_users = user_data_store.get('active_users', {})
-        active_users[user_data.get('id', doc.id)] = {
-            'role': role,
-            'last_active': import_time()
-        }
-        user_data_store['active_users'] = active_users
-            
-        return jsonify({
-            'success': True,
-            'message': 'Login successful',
-            'data': user_data
-        }), 200
-
-    except Exception as e:
-        print(f'Error during login: {str(e)}')
-        return jsonify({
-            'success': False,
-            'message': 'Internal server error'
-        }), 500
-
-# Add logout endpoint
-@app.route('/logout', methods=['POST'])
-def logout():
-    data = request.get_json()
-    user_id = data.get('userID')
-    
-    # Remove from active users if exists
-    active_users = user_data_store.get('active_users', {})
-    if user_id in active_users:
-        del active_users[user_id]
-    
-    return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
-
 # Helper function to get current time
 def import_time():
     import time
     return time.time()
 
+
 if __name__ == '__main__':
     try:
-        # Periodically clean up old user data to prevent memory leaks
-        def cleanup_user_data():
-            current_time = import_time()
-            expiry_time = 30 * 60  # 30 minutes
-            
-            # Clean up expired user data
-            for key in list(user_data_store.keys()):
-                if key == 'active_users':  # Skip active users dict
-                    continue
-                    
-                info = user_data_store[key]
-                if 'timestamp' in info and current_time - info['timestamp'] > expiry_time:
-                    print(f"Cleaning up stale data for {key}")
-                    del user_data_store[key]
-            
-            # Also clean up inactive users
-            if 'active_users' in user_data_store:
-                active_users = user_data_store['active_users']
-                for user_id in list(active_users.keys()):
-                    if current_time - active_users[user_id].get('last_active', 0) > expiry_time:
-                        del active_users[user_id]
-            
-            # Schedule next cleanup
-            import threading
-            threading.Timer(300, cleanup_user_data).start()  # Run every 5 minutes
-        
-        # Start cleanup thread
-        cleanup_user_data()
-        
         app.run(host='0.0.0.0', port=4505, debug=True)
     except Exception as e:
         print('Failed to start the server:', str(e))
