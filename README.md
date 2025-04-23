@@ -1,6 +1,6 @@
-Rashtriya Swasthya Sanrakshan Auth Server
+# Rashtriya Swasthya Sanrakshan Auth Server
 
-A secure authentication server built with Flask that provides Aadhaar-based authentication and user management.
+A secure authentication server built with Node.js and Express that provides Aadhaar-based authentication and user management.
 
 ## Features
 
@@ -8,145 +8,145 @@ A secure authentication server built with Flask that provides Aadhaar-based auth
 - **OTP Verification**: Two-factor authentication with OTP
 - **User Management**: Registration, login, and profile management
 - **Role-Based Access**: Supports patients, doctors, and government roles
-- **Session Management**: Secure session handling
+- **Session Management**: Secure session handling with JWT
 - **Environment-based Configuration**: Secure credential management
 
 ## Setup
 
 ### Prerequisites
 
-- Python 3.7+
-- pip
+- Node.js 14+
+- npm or yarn
 - Firebase account with Firestore enabled
 
 ### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/rss-auth-server.git
-   cd rss-auth-server
-   ```
+  ```bash
+  git clone https://github.com/codeRisshi25/rss-auth-server.git
+  cd rss-auth-server
+  ```
 
 2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+  ```bash
+  npm install
+  ```
 
-3. Create a .env file in the root directory with the following:
-   ```
-   # API Credentials
-   API_KEY=your_sandbox_api_key
-   API_SECRET=your_sandbox_api_secret
-   ACCESS_TOKEN=your_sandbox_access_token
+3. Create a `.env` file in the root directory with the following:
+  ```
+  # API Credentials
+  API_KEY=your_sandbox_api_key
+  API_SECRET=your_sandbox_api_secret
+  ACCESS_TOKEN=your_sandbox_access_token
 
-   # Flask Configuration
-   FLASK_SECRET_KEY=your_random_secure_key
-   FLASK_ENV=development
+  # Node.js Configuration
+  JWT_SECRET=your_random_secure_key
+  NODE_ENV=development
+  PORT=4505
 
-   # Firebase Configuration
-   FIREBASE_CREDENTIALS_PATH=./your-firebase-credentials-file.json
-   ```
+  # Firebase Configuration
+  FIREBASE_CREDENTIALS_PATH=./your-firebase-credentials-file.json
+  ```
 
-4. Place your Firebase service account credentials JSON file in the root directory
+4. Place your Firebase service account credentials JSON file in the root directory.
 
 ### Running the Server
 
 ```bash
-python server.py
+npm start
 ```
 
-The server will start at http://0.0.0.0:4505
+The server will start at http://localhost:4505
 
 ## API Endpoints
 
 ### Authentication
 
 #### Send OTP
-- **URL**: `/send-otp`
+- **URL**: `/api/auth/send-otp`
 - **Method**: `POST`
 - **Body**:
   ```json
   {
-    "aadharNumberMain": "123456789012",
-    "password": "your_password"
+   "aadharNumber": "123456789012",
+   "password": "your_password"
   }
   ```
 - **Response**:
   ```json
   {
-    "success": true,
-    "reference_id": "ref_id_from_aadhaar"
+   "success": true,
+   "referenceId": "ref_id_from_aadhaar"
   }
   ```
 
 #### Verify OTP
-- **URL**: `/verify-otp`
+- **URL**: `/api/auth/verify-otp`
 - **Method**: `POST`
 - **Body**:
   ```json
   {
-    "otp": "123456",
-    "reference_id": "ref_id_from_previous_step"
+   "otp": "123456",
+   "referenceId": "ref_id_from_previous_step"
   }
   ```
 - **Response**:
   ```json
   {
-    "success": true,
-    "message": "OTP verified successfully",
-    "data": {
-      "user_details": "..."
-    }
+   "success": true,
+   "message": "OTP verified successfully",
+   "data": {
+    "userDetails": "..."
+   }
   }
   ```
 
 #### Register User
-- **URL**: `/register_user`
+- **URL**: `/api/users/register`
 - **Method**: `POST`
 - **Body**:
   ```json
   {
-    "blood_group": "O+",
-    "allergies": ["Peanuts", "Dust"]
+   "bloodGroup": "O+",
+   "allergies": ["Peanuts", "Dust"]
   }
   ```
 - **Response**:
   ```json
   {
-    "success": true,
-    "message": "User registered successfully",
-    "user_id": "generated_user_id"
+   "success": true,
+   "message": "User registered successfully",
+   "userId": "generated_user_id"
   }
   ```
 
 #### Login
-- **URL**: `/login` or `/auth/login`
+- **URL**: `/api/auth/login`
 - **Method**: `POST`
 - **Body**:
   ```json
   {
-    "userID": "user_id",
-    "password": "user_password",
-    "role": "patients"
+   "userId": "user_id",
+   "password": "user_password",
+   "role": "patients"
   }
   ```
 - **Response**:
   ```json
   {
-    "success": true,
-    "message": "Login successful",
-    "data": {
-      "user_details": "..."
-    }
+   "success": true,
+   "message": "Login successful",
+   "token": "jwt_token"
   }
   ```
 
 #### Logout
-- **URL**: `/logout`
+- **URL**: `/api/auth/logout`
 - **Method**: `POST`
 - **Response**:
   ```json
   {
+   "success": true,
     "success": true,
     "message": "Logged out successfully"
   }
