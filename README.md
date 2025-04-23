@@ -18,6 +18,7 @@ A secure authentication server built with Node.js and Express that provides Aadh
 - Node.js 14+
 - npm or yarn
 - Firebase account with Firestore enabled
+- Sandbox API credentials
 
 ### Installation
 
@@ -40,9 +41,8 @@ A secure authentication server built with Node.js and Express that provides Aadh
   ACCESS_TOKEN=your_sandbox_access_token
 
   # Node.js Configuration
-  JWT_SECRET=your_random_secure_key
   NODE_ENV=development
-  PORT=4505
+  PORT=6420
 
   # Firebase Configuration
   FIREBASE_CREDENTIALS_PATH=./your-firebase-credentials-file.json
@@ -56,7 +56,7 @@ A secure authentication server built with Node.js and Express that provides Aadh
 npm start
 ```
 
-The server will start at http://localhost:4505
+The server will start at http://localhost:6420
 
 ## API Endpoints
 
@@ -165,23 +165,35 @@ The server will start at http://localhost:4505
 ### Directory Structure
 
 ```
+rss-backend-server/
+```
 rss-auth-server/
-│
-├── server.py                     # Main server code
+├── app.js                        # Main server code
 ├── .env                          # Environment variables (not in version control)
-├── project-xyz-firebase-xxx.json # Firebase credentials (not in version control)
-├── requirements.txt              # Python dependencies
-└── .gitignore                    # Git ignore file
+├── firebase-credentials.json     # Firebase credentials (not in version control)
+├── package.json                  # Node.js dependencies and scripts
+├── package-lock.json             # Lockfile for npm dependencies
+├── README.md                     # Project documentation
+├── .gitignore                    # Git ignore file
+└── src/                          # Source code directory
+  ├── routes/                   # API route handlers
+  ├── controllers/              # Business logic and controllers
+  ├── models/                   # Database models
+  ├── middlewares/              # Middleware functions
+  └── utils/                    # Utility functions
+```
 ```
 
 ### Requirements
 
 ```
-flask==2.0.1
-flask_cors==3.0.10
-requests==2.26.0
-firebase-admin==5.0.3
-python-dotenv==0.19.0
+```
+- express: ^4.18.2
+- cors: ^2.8.5
+- axios: ^1.4.0
+- firebase-admin: ^11.10.1
+- dotenv: ^16.3.1
+```
 ```
 
 ## Error Handling
@@ -209,7 +221,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Sandbox Aadhaar API](https://api.sandbox.co.in) for Aadhaar verification
 - [Firebase](https://firebase.google.com) for database services
-- [Flask](https://flask.palletsprojects.com) web framework
 
 ---
 
