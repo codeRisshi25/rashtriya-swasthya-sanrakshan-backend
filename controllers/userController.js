@@ -116,8 +116,8 @@ const registerUser = async (req, res) => {
     contact: data.emergencyContact || "",
     age: data.age || "",
     currentMedications: data.medications || "",
-    address: walletAddress || "",
-    key: privateKey || "",
+    walletAddress: walletAddress || "",
+    privateKey: privateKey || "",
     medicalDetails: {
       bloodGroup: data.bloodType || "",
       allergies: allergies,
@@ -125,6 +125,7 @@ const registerUser = async (req, res) => {
     },
     medicalHistory: conditions,
     vaccinationHistory: vaccines,
+    loggedIn: false,
     created_at: admin.firestore.FieldValue.serverTimestamp(),
   };
 

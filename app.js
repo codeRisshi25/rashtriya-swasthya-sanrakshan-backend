@@ -14,12 +14,16 @@ const authRoutes = require('./routes/authRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const userRoutes = require('./routes/userRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
+const accessRouutes = require('./routes/accessControlRoutes');
 
 // Initialize Express app
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:6420'], // Add all your frontend origins
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -27,6 +31,7 @@ app.use('/auth', authRoutes);
 app.use('/', otpRoutes); // Keeping original route paths
 app.use('/', userRoutes); // Keeping original route paths
 app.use('/api', doctorRoutes);
+app.use('/access',accessRouutes);
 
 // Example endpoint to test Firestore connection
 app.get("/test-connection", async (req, res) => {

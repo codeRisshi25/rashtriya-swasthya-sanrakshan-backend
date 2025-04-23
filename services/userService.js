@@ -70,17 +70,19 @@ const getUserData = async (userID, role, password) => {
     // Verify password
     const storedPassword = userData.password || "";
     const hashedInputPassword = crypto
-      .createHash("sha256")
-      .update(password, "utf8")
-      .digest("hex");
-
+    .createHash("sha256")
+    .update(password, "utf8")
+    .digest("hex");
+    
     if (storedPassword !== hashedInputPassword) {
       console.log(`Wrong password for userID: ${user_id} in role: ${role}`);
       return null;
     }
-
+    
+    await db.collection(role).doc(user_id).update({ loggedIn: true });
     // Remove sensitive data before returning
     const { password: _, ...userDataWithoutPassword } = userData;
+    // Update the loggedin field to true
     return userDataWithoutPassword;
   } catch (e) {
     console.error(`Error during login: ${e.message}`);
