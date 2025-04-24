@@ -37,7 +37,7 @@ const createPatientWallet = async () => {
 
     // 3. Prepare registerWithTracking data
     const data = contract.methods
-      .registerWithTracking(2) // role 2 = patient
+      .registerWithTracking(1) // role 2 = patient
       .encodeABI();
 
     const txCount = await web3.eth.getTransactionCount(address);

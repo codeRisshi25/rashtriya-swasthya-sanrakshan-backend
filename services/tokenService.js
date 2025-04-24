@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { updateEnvFile } = require("../utils/envUtils");
+require("dotenv").config(); // Correctly load environment variables
 
 // Function to generate a new access token
 const generateAccessToken = async () => {
@@ -10,6 +11,11 @@ const generateAccessToken = async () => {
     "x-api-secret": process.env.API_SECRET,
     "x-api-version": "1.0",
   };
+
+  // Validate environment variables
+  if (!process.env.API_KEY || !process.env.API_SECRET) {
+    throw new Error("API_KEY or API_SECRET is not defined in the environment variables.");
+  }
 
   try {
     console.log("Generating access token...");
@@ -35,10 +41,17 @@ const generateAccessToken = async () => {
     }
   } catch (error) {
     console.error("Error generating access token:", error.message);
+
+    // Log additional error details if available
+    if (error.response) {
+      console.error("Response status:", error.response.status);
+      console.error("Response data:", error.response.data);
+    }
+
     throw error;
   }
 };
 
 module.exports = {
-  generateAccessToken
+  generateAccessToken,
 };

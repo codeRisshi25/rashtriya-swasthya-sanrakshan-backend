@@ -1,9 +1,8 @@
-// Fix the import to match the exported function name from the service
-const { retrieveDoctors: retrieveDoctorsService } = require('../services/accessControlService');
+const { retrieveDoctors, grantAccess, revokeAccess } = require('../services/accessControlService');
 const firebaseConfig = require("../config/firebaseConfig.js");
 
 // Controller for retrieving doctors
-const retrieveDoctors = async (req, res) => {
+const retrieveDoctorsController = async (req, res) => {
   try {
     // Log incoming request for debugging
     console.log("🔍 Doctor access request received:", {
@@ -26,7 +25,7 @@ const retrieveDoctors = async (req, res) => {
     console.log(`📋 Retrieving doctors for user: ${userID}`);
     
     // Call the service function to get the doctors
-    const doctors = await retrieveDoctorsService(userID);
+    const doctors = await retrieveDoctors(userID);
     
     console.log(`✅ Found ${doctors.length} doctors for user ${userID}`);
     
@@ -45,28 +44,70 @@ const retrieveDoctors = async (req, res) => {
   }
 };
 
-// Placeholder for grant access function
-const grantAccess = async (req, res) => {
+// Controller for granting access to a doctor
+const grantAccessController = async (req, res) => {
   try {
-    // Implementation will go here
-    res.status(200).json({ success: true, message: "Access granted" });
+    const { patientID, doctorID, privateKey } = req.body;
+    
+    if (!patientID || !doctorID || !privateKey) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters (patientID, doctorID, privateKey)"
+      });
+    }
+    
+    console.log(`🔑 Granting access for doctor ${doctorID} to patient ${patientID}`);
+    
+    const result = await grantAccess(patientID, doctorID, privateKey);
+    
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(400).json(result);
+    }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("❌ Error granting access:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to grant access",
+      error: error.message
+    });
   }
 };
 
-// Placeholder for revoke access function
-const revokeAccess = async (req, res) => {
+// Controller for revoking access from a doctor
+const revokeAccessController = async (req, res) => {
   try {
-    // Implementation will go here
-    res.status(200).json({ success: true, message: "Access revoked" });
+    const { patientID, doctorID, privateKey } = req.body;
+    
+    if (!patientID || !doctorID || !privateKey) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters (patientID, doctorID, privateKey)"
+      });
+    }
+    
+    console.log(`🔒 Revoking access for doctor ${doctorID} from patient ${patientID}`);
+    
+    const result = await revokeAccess(patientID, doctorID, privateKey);
+    
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(400).json(result);
+    }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("❌ Error revoking access:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to revoke access",
+      error: error.message
+    });
   }
 };
 
 module.exports = {
-  retrieveDoctors,
-  grantAccess,
-  revokeAccess
+  retrieveDoctors: retrieveDoctorsController,
+  grantAccess: grantAccessController,
+  revokeAccess: revokeAccessController
 };
