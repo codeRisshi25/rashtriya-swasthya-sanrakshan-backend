@@ -116,8 +116,7 @@ const getPatients = async (req, res) => {
     });
   }
 };
-
-// Add a medical record for a patient
+// Add a medical record for a patient - blockchain storage only
 const addRecord = async (req, res) => {
   try {
     const { patientId, description, privateKey } = req.body;
@@ -188,79 +187,85 @@ const addRecord = async (req, res) => {
     }
     
     // 1. Upload file to IPFS via Pinata
-    const formData = new FormData();
-    formData.append('file', fs.createReadStream(recordFile.path));
-    
-    const pinataMetadata = JSON.stringify({
-      name: `Medical Record - ${new Date().toISOString()}`,
-    });
-    formData.append('pinataMetadata', pinataMetadata);
-    
-    const pinataOptions = JSON.stringify({
-      cidVersion: 0,
-    });
-    formData.append('pinataOptions', pinataOptions);
-    
-    // Make API call to Pinata
-    const pinataResponse = await axios.post(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      formData,
-      {
-        maxBodyLength: Infinity,
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
-          'pinata_api_key': process.env.PINATA_API_KEY,
-          'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY,
-        },
-      }
-    );
-    
-    const cid = pinataResponse.data.IpfsHash;
-    console.log(`📌 File uploaded to IPFS with CID: ${cid}`);
-    
-    // Clean up temp file
-    fs.unlinkSync(recordFile.path);
-    
-    // 2. Add doctor account to web3 wallet using private key
-    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-    web3.eth.accounts.wallet.add(account);
-    
-    // Verify wallet ownership
-    if (account.address.toLowerCase() !== doctorWalletAddress.toLowerCase()) {
-      return res.status(403).json({
-        success: false,
-        message: "The private key does not match the doctor's wallet address"
+    try {
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(recordFile.path));
+      
+      // Add metadata about the record to help with retrieval
+      const pinataMetadata = JSON.stringify({
+        name: `Medical Record - ${patientId} - ${new Date().toISOString()}`,
+        keyvalues: {
+          patientId: patientId,
+          doctorId: doctorId,
+          description: description.substring(0, 50), // First 50 chars for searchability
+          timestamp: new Date().toISOString(),
+          fileName: recordFile.originalname
+        }
       });
+      formData.append('pinataMetadata', pinataMetadata);
+      
+      const pinataOptions = JSON.stringify({
+        cidVersion: 0,
+      });
+      formData.append('pinataOptions', pinataOptions);
+      
+      // Make API call to Pinata using JWT for better security
+      const pinataResponse = await axios.post(
+        "https://api.pinata.cloud/pinning/pinFileToIPFS",
+        formData,
+        {
+          maxBodyLength: Infinity,
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
+            'Authorization': `Bearer ${process.env.PINATA_JWT}`
+          },
+        }
+      );
+      
+      const cid = pinataResponse.data.IpfsHash;
+      console.log(`📌 File uploaded to IPFS with CID: ${cid}`);
+      
+      // Clean up temp file
+      fs.unlinkSync(recordFile.path);
+      
+      // 2. Add doctor account to web3 wallet using private key
+      const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+      web3.eth.accounts.wallet.add(account);
+      
+      // Verify wallet ownership
+      if (account.address.toLowerCase() !== doctorWalletAddress.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          message: "The private key does not match the doctor's wallet address"
+        });
+      }
+      
+      // 3. Add record to blockchain
+      console.log(`Adding record to blockchain: Patient=${patientWalletAddress}, CID=${cid}`);
+      const receipt = await contract.methods.addRecord(
+        patientWalletAddress,
+        cid,
+        description
+      ).send({
+        from: account.address,
+        gas: 300000
+      });
+      
+      console.log(`✅ Record added to blockchain. Transaction: ${receipt.transactionHash}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: "Record added successfully",
+        cid,
+        viewLink: `https://gateway.pinata.cloud/ipfs/${cid}`,
+        transactionHash: receipt.transactionHash,
+        blockNumber: String(receipt.blockNumber),
+        fileName: recordFile.originalname
+      });
+    } catch (error) {
+      console.error("Error with Pinata or blockchain:", error);
+      throw error; // Re-throw to be caught by outer try-catch
     }
-    
-    // 3. Add record to blockchain
-    const receipt = await contract.methods.addRecord(
-      patientWalletAddress,
-      cid,
-      description
-    ).send({
-      from: account.address,
-      gas: 300000
-    });
-    
-    console.log(`✅ Record added to blockchain. Transaction: ${receipt.transactionHash}`);
-    
-    // 4. Store record info in Firebase
-    await db.collection('medicalRecords').add({
-      doctorId,
-      patientId,
-      cid,
-      description,
-      timestamp: new Date().toISOString(),
-      transactionHash: receipt.transactionHash
-    });
-    
-    return res.status(200).json({
-      success: true,
-      message: "Record added successfully",
-      cid,
-      transactionHash: receipt.transactionHash
-    });
   } catch (error) {
     console.error("❌ Error adding record:", error);
     
@@ -278,6 +283,6 @@ const addRecord = async (req, res) => {
 };
 
 module.exports = {
-  getPatients,
-  addRecord
+  addRecord,
+  getPatients // This must be defined above
 };
