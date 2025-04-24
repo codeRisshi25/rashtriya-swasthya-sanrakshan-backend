@@ -97,8 +97,29 @@ async function updateDoctorAccess(patientID, doctorID, hasAccess) {
                 doctors: firebaseConfig.admin.firestore.FieldValue.arrayRemove(doctorID)
             });
         }
+        //update doctor document
+        console.log("Looking for doctor with ID:", doctorID);
+        const doctorQuerySnapshot = await db.collection('doctors')
+            .where('userId', '==', doctorID)
+            .limit(1)
+            .get();
         
+        if (!doctorQuerySnapshot.empty) {
+            const doctorDocRef = doctorQuerySnapshot.docs[0].ref;
+            if (hasAccess) {
+                await doctorDocRef.update({
+                    patients: firebaseConfig.admin.firestore.FieldValue.arrayUnion(patientID)
+                });
+            } else {
+                await doctorDocRef.update({
+                    patients: firebaseConfig.admin.firestore.FieldValue.arrayRemove(patientID)
+                });
+            }
+        } else {
+            console.log(`No doctor found with ID: ${doctorID}`);
+        }
         return true;
+
     } catch (error) {
         console.error('Firebase update error:', error);
         return false;

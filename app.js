@@ -30,7 +30,7 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/', otpRoutes); // Keeping original route paths
 app.use('/', userRoutes); // Keeping original route paths
-app.use('/api', doctorRoutes);
+app.use('/doctors', doctorRoutes);
 app.use('/access',accessRouutes);
 
 // Example endpoint to test Firestore connection
